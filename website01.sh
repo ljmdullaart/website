@@ -2,9 +2,10 @@
 #INSTALL@ /usr/local/bin/website01
 
 website=www
-
 wd=$(pwd)
 base=$(basename $wd)
+htmldir=html
+
 if [ -f meta.in ] ; then
 	title=$(sed -n 's/^\.title *//p' meta.in | head)
 elif [ -f destination ] ; then
@@ -18,6 +19,64 @@ fi
 
 if [ ! -d html ] ; then
 	echo "ERROR: no directory 'html' which should containhtml-parts"
+	exit 9
+fi
+
+if [ ! -d $website ] ; then
+	echo "Warning: no '$website' directory; so nothing is made"
+	exit 0
+fi
+
+hellup(){
+cat <<EOF
+
+NAME:
+    $0: website beautifier - leftbar style
+
+SYNOPSIS:
+    $0 [ -s source ] [ -t title ] [ -w website ]
+
+DESCRIPTION:
+
+$0 converts a the html-parts in the source directory to
+a website under the target directory. $0 is meant for 
+simple websites, not for multi-level sites with multiple
+directories.
+
+A htmlpart is a piece of HTML code without the introductory
+<html>, without the header part and without the introductory
+<body>.
+
+ARGUMENTS:
+
+    -s Source directory where the HTML parts are (default: html)
+    -w Target website directory (default: www)
+    -t Title (default: as defined in meta.in or in the file
+       destination or in the first .in file, or else the base-name
+          of the current directory)
+
+Note that all directories are relative to the current directory.
+
+BUGS/FEATURES:
+Absolute paths for source or target do not work.
+
+AUTHOR:
+ljm
+
+EOF
+}
+
+while getopts "hswh:" opt ; do
+	case "$opt" in
+		(h) hellup ; exit 0 ;;
+		(s) htmldir="$OPTARG" ;;
+		(t) title="$OPTARG" ;;
+		(w) website="$OPTARG" ;;
+	esac
+done
+
+if [ ! -d "$htmldir" ] ; then
+	echo "ERROR: no directory '$htmldir' which should contain html-parts"
 	exit 9
 fi
 
@@ -309,14 +368,14 @@ body {
 /* End sidenav */
 EOF
 
-for file in html/*html ; do
+for file in $htmldir/*html ; do
 	basefile=$(basename "$file")
 	cat > "$website/$basefile" <<EOF
 <!DOCTYPE html>
 <html lang="$language">
     <head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>$title</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>$title</title>
         <link rel="stylesheet" href="website.css">
 EOF
 	if [ -f stylesheet.css ] ; then
@@ -330,12 +389,12 @@ EOF
         <div class="nav-side-menu">
                 <div class="brand">
                     <img src=$coverpng alt="cover">
-					<h1>$title</h1>
+                    <h1>$title</h1>
                 </div>
                 <div class="menu-list">
 EOF
-	if [ -f html/header.htm ] ; then
-		cat html/header.htm >> "$website/$basefile"
+	if [ -f $htmldir/header.htm ] ; then
+		cat $htmldir/header.htm >> "$website/$basefile"
 	fi
 	cat >> "$website/$basefile" <<EOF
                 </div>

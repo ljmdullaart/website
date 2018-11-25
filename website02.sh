@@ -86,6 +86,9 @@ if [ -f meta.in ] ; then
 		language=en
 	fi
 fi
+if [ -f "$coverpng" ] ; then
+	convert -resize 400x400 "$coverpng" "$website/$coverpng"
+fi
 
 # I know parsing of ls is generally bad; dont spam me for it
 files=($(ls $htmldir/*html | sort -n))

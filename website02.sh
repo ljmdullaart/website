@@ -1,10 +1,18 @@
 #!/bin/bash
 #INSTALL@ /usr/local/bin/website02
 
-website=www
+if [ -d web ] ; then
+	website=web
+else
+	website=www
+fi
 wd=$(pwd)
 base=$(basename $wd)
-htmldir=html
+if [ -d htm ] ; then
+	htmldir=htm
+else
+	htmldir=html
+fi
 
 if [ -f meta.in ] ; then
 	title=$(sed -n 's/^\.title *//p' meta.in | head)
@@ -91,8 +99,8 @@ if [ -f "$coverpng" ] ; then
 fi
 
 # I know parsing of ls is generally bad; dont spam me for it
-files=($(ls $htmldir/*html | sort -n))
-qfiles=$(ls $htmldir/*html|wc -l)
+files=($(ls $htmldir/*.htm* | sort -n))
+qfiles=$(ls $htmldir/*.htm*|wc -l)
 
 if [ -f $htmldir/index.html ] ; then 
 	index="$htmldir/index.html"
@@ -110,7 +118,9 @@ elif [ -f $htmldir/header.htm ] ; then
 else
 	header=none
 fi
-if [ -f $htmldir/total.html ] ; then 
+if [ -f $htmldir/$complete.html ] ; then 
+	total="$htmldir/complete.html"
+elif [ -f $htmldir/$total.html ] ; then 
 	total="$htmldir/total.html"
 elif [ -f $htmldir/total.htm ] ; then 
 	total="$htmldir/total.htm"
@@ -138,6 +148,7 @@ while [ $i -lt $qfiles ] ; do
 	if [ $n -ne $qfiles ] ; then
 		nbase=$(basename ${files[$n]})
 		if [ "$nbase" = "total.html" ] ; then ntitle=''; nline[$i]=""; 
+		elif [ "$nbase" = "complete.html" ] ; then ntitle=''; nline[$i]=""; 
 		elif [ "$nbase" = "index.html" ] ; then ntitle=''; nline[$i]=""; 
 		elif [ "$nbase" = "header.html" ] ; then ntitle=''; nline[$i]=""; 
 		elif [ "$nbase" = "meta.html" ] ; then ntitle=''; nline[$i]=""; 
@@ -162,6 +173,7 @@ while [ $i -lt $qfiles ] ; do
 	basefile=$(basename "$file")
 	if [ "$basefile" = "index.html"  ] ; then  cp "$htmldir/index.html"  $website ; break; fi
 	if [ "$basefile" = "total.html"  ] ; then  cp "$htmldir/total.html"  $website ; break; fi
+	if [ "$basefile" = "complete.html"  ] ; then  cp "$htmldir/complete.html"  $website ; break; fi
 	if [ "$basefile" = "header.html" ] ; then  cp "$htmldir/header.html" $website ; break; fi
 	cat > "$website/$basefile" <<EOF
 <!DOCTYPE html>

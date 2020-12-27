@@ -1,10 +1,20 @@
 #!/bin/bash
 #INSTALL@ /usr/local/bin/website01
+debug=yes
 
-website=www
+if [ -d web ] ; then
+        website=web
+else
+        website=www
+fi
 wd=$(pwd)
 base=$(basename $wd)
-htmldir=html
+if [ -d htm ] ; then
+        htmldir=htm
+else
+        htmldir=html
+fi
+
 
 if [ -f meta.in ] ; then
 	title=$(sed -n 's/^\.title *//p' meta.in | head)
@@ -15,16 +25,6 @@ else
 fi
 if [ "$title" = "" ] ; then
 	title="$base"
-fi
-
-if [ ! -d html ] ; then
-	echo "ERROR: no directory 'html' which should containhtml-parts"
-	exit 9
-fi
-
-if [ ! -d $website ] ; then
-	echo "Warning: no '$website' directory; so nothing is made"
-	exit 0
 fi
 
 hellup(){
@@ -54,6 +54,8 @@ ARGUMENTS:
     -t Title (default: as defined in meta.in or in the file
        destination or in the first .in file, or else the base-name
           of the current directory)
+    -h Print this helptext
+    -d [yes|no] Set debug output
 
 Note that all directories are relative to the current directory.
 
@@ -66,14 +68,21 @@ ljm
 EOF
 }
 
-while getopts "hswh:" opt ; do
+while getopts "hdswh:" opt ; do
 	case "$opt" in
+		(d) debug="$OPTARG" ;;
 		(h) hellup ; exit 0 ;;
 		(s) htmldir="$OPTARG" ;;
 		(t) title="$OPTARG" ;;
 		(w) website="$OPTARG" ;;
 	esac
 done
+
+if [ "$debug" = "yes" ] ; then
+	echo "Title:     $title"
+	echo "Htmldir:   $htmldir"
+	echo "Website:   $website"
+fi
 
 if [ ! -d "$htmldir" ] ; then
 	echo "ERROR: no directory '$htmldir' which should contain html-parts"
@@ -85,6 +94,8 @@ if [ ! -d $website ] ; then
 	exit 0
 fi
 
+mkwebindex > $website/header.html
+
 if [ -f meta.in ] ; then
 	coverpng=`sed -n 's/^\.cover *//p' meta.in`
 	if [ "$coverpng" = "" ] ; then
@@ -94,9 +105,30 @@ if [ -f meta.in ] ; then
 	if [ "$language" = "" ] ; then
 		language=en
 	fi
+else
+	coverpng=cover.png
+	language=en
 fi
 
+if [ "$debug" = "yes" ] ; then
+	echo "Cover:     $coverpng"
+	echo "Language:  $language"
+fi
 
+if [ -d block ] ; then
+	if [ -L "$website/block" ] ; then
+		echo "Block link exists."
+	else
+		ln -s $(realpath block) "$website/block"
+		echo "Block link made."
+	fi
+fi
+
+if [ ! -f "$coverpng" ] ; then
+	convert -size 400x400 canvas:white "$coverpng"
+fi
+
+cp cover.png $website
 
 cat > $website/website.css <<EOF
 title-header{
@@ -368,9 +400,13 @@ body {
 /* End sidenav */
 EOF
 
-for file in $htmldir/*html ; do
+for file in $htmldir/*.htm* ; do
 	basefile=$(basename "$file")
-	cat > "$website/$basefile" <<EOF
+	stem=${basefile%.ht*}
+	if [ "$stem" = "header" ] ; then 
+		continue
+	fi
+	cat > "$website/$stem.html" <<EOF
 <!DOCTYPE html>
 <html lang="$language">
     <head>
@@ -380,10 +416,10 @@ for file in $htmldir/*html ; do
 EOF
 	if [ -f stylesheet.css ] ; then
 		cp stylesheet.css $website
-		echo '        <link rel="stylesheet" href="stylesheet.css">' >> "$website/$basefile" 
+		echo '        <link rel="stylesheet" href="stylesheet.css">' >> "$website/$stem.html" 
 	fi
 
-	cat >> "$website/$basefile" <<EOF
+	cat >> "$website/$stem.html" <<EOF
     </head>
     <body>
         <div class="nav-side-menu">
@@ -393,10 +429,16 @@ EOF
                 </div>
                 <div class="menu-list">
 EOF
-	if [ -f $htmldir/header.htm ] ; then
-		cat $htmldir/header.htm >> "$website/$basefile"
+
+	if [ -f $htmldir/header.html ] ; then
+		cp $htmldir/header.html  "$website"
+	elif [ -f $htmldir/header.htm ] ; then
+		cp $htmldir/header.htm  "$website/header.html"
+	else
+		touch "$website/header.html"
 	fi
-	cat >> "$website/$basefile" <<EOF
+	cat $website/header.html >> "$website/$stem.html"
+	cat >> "$website/$stem.html" <<EOF
                 </div>
             </div>
             <div class="container" id="main">
@@ -404,8 +446,8 @@ EOF
                     <div class="col-md-12">
                         <div class="article">
 EOF
-	cat $file >> "$website/$basefile"
-	cat >> "$website/$basefile" <<EOF
+	cat $file >> "$website/$stem.html"
+	cat >> "$website/$stem.html" <<EOF
                         </div>
                     </div>
                 </div>
